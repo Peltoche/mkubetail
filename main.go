@@ -11,6 +11,8 @@ func main() {
 	// Set the flag variables.
 	var matchsOpt []string
 	var rawOpt bool
+	var podNamePrefixOpt bool
+	var contextNamePrefixOpt bool
 
 	// Define the cli.
 	rootCmd := cobra.Command{
@@ -24,6 +26,10 @@ func main() {
 				Contexts: matchsOpt,
 				Pods:     args,
 				Raw:      rawOpt,
+				LineConfig: LineConfig{
+					ShowPodName:     podNamePrefixOpt,
+					ShowContextName: contextNamePrefixOpt,
+				},
 			})
 			if err != nil {
 				fmt.Println(err)
@@ -34,7 +40,9 @@ func main() {
 
 	// Link the flag variables to the cli.
 	rootCmd.PersistentFlags().StringArrayVarP(&matchsOpt, "context", "c", []string{}, "Context name or regex. All contexts are used if not specified.")
-	rootCmd.PersistentFlags().BoolVarP(&rawOpt, "raw", "r", false, "Merge all the logs together and return an output similar to \"tail -f\" ")
+	rootCmd.PersistentFlags().BoolVarP(&rawOpt, "raw", "r", false, "Merge all the logs together and return an output similar to \"tail -f\"")
+	rootCmd.PersistentFlags().BoolVarP(&podNamePrefixOpt, "pod-name", "p", false, "Prefix each line with the pod's name")
+	rootCmd.PersistentFlags().BoolVarP(&contextNamePrefixOpt, "context-name", "C", false, "Prefix each line with the pod's context name")
 
 	// Run the cli.
 	err := rootCmd.Execute()

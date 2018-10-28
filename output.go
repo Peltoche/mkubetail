@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"io"
 	"log"
 	"sync"
 
@@ -76,16 +75,16 @@ func PrintOutput(pods []Pod) error {
 
 // PrintRawOutput read from  the "Out" readCloser inside each pod and write the
 // raw content into Stdout.
-func PrintRawOutput(pods []Pod) {
+func PrintRawOutput(pods []Pod, lineCfg *LineConfig) {
 	var wg sync.WaitGroup
 
 	for _, pod := range pods {
 		wg.Add(1)
 
-		go func(out io.ReadCloser) {
+		go func(pod Pod) {
 			defer wg.Done()
 
-			reader := bufio.NewReader(out)
+			reader := bufio.NewReader(pod.Out)
 
 			for {
 				line, _, err := reader.ReadLine()
@@ -93,12 +92,30 @@ func PrintRawOutput(pods []Pod) {
 					log.Println(err)
 				}
 
-				fmt.Println(string(line))
+				fmt.Print(formatLogLine(string(line), pod, lineCfg))
 			}
-		}(pod.Out)
+		}(pod)
 	}
 
 	wg.Wait()
+}
+
+func formatLogLine(content string, pod Pod, cfg *LineConfig) string {
+	var prefix string
+
+	if cfg.ShowContextName {
+		prefix = fmt.Sprintf("[%s]", pod.Context)
+	}
+
+	if cfg.ShowPodName {
+		prefix = fmt.Sprintf("%s[%s]", prefix, pod.Name)
+	}
+
+	if cfg.ShowContextName || cfg.ShowPodName {
+		prefix = prefix + " "
+	}
+
+	return prefix + content + "\n"
 }
 
 func onUpdate(pods []Pod, g *gocui.Gui) error {

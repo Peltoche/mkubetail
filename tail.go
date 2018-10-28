@@ -8,9 +8,16 @@ import (
 // Cmd describes the command needed to be runned and the rules used to choose
 // the selected contexts.
 type Cmd struct {
-	Contexts []string
-	Pods     []string
-	Raw      bool
+	Contexts   []string
+	Pods       []string
+	Raw        bool
+	LineConfig LineConfig
+}
+
+// LineConfig describe the configs choosed for the log line representation.
+type LineConfig struct {
+	ShowContextName bool
+	ShowPodName     bool
 }
 
 // Tail the all the matchings pod inside the matchin contexts described inside
@@ -29,7 +36,7 @@ func Tail(cmd *Cmd) error {
 	}
 
 	if cmd.Raw {
-		PrintRawOutput(pods)
+		PrintRawOutput(pods, &cmd.LineConfig)
 		return nil
 	}
 
