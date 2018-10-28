@@ -21,10 +21,7 @@ func Tail(cmd *Cmd) error {
 		return err
 	}
 
-	pods, err := SelectMatchingPods(contexts, cmd.Pods)
-	if err != nil {
-		return err
-	}
+	pods := SelectMatchingPods(contexts, cmd.Pods)
 
 	err = startAsyncPodWatching(pods)
 	if err != nil {

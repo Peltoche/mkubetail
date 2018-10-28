@@ -42,7 +42,9 @@ func PrintOutput(pods []Pod) error {
 			reader := bufio.NewReader(pod.Out)
 
 			for {
-				line, _, err := reader.ReadLine()
+				var line []byte
+
+				line, _, err = reader.ReadLine()
 				if err != nil {
 					log.Println(err)
 				}

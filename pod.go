@@ -23,21 +23,18 @@ func (t *Pod) ID() string {
 // on the specified contexts and return only the ones matchins the arguments.
 //
 // In case of failure, return nil and the corresponding error.
-func SelectMatchingPods(contexts []string, args []string) ([]Pod, error) {
-	pods, err := RetrieveAllPods(contexts)
-	if err != nil {
-		return nil, err
-	}
+func SelectMatchingPods(contexts []string, args []string) []Pod {
+	pods := RetrieveAllPods(contexts)
 
 	if len(args) > 0 {
 		pods = filterPodsWithArgs(pods, args)
 	}
 
-	return pods, nil
+	return pods
 }
 
 // RetrieveAllPods query all the contexts and returns all the known pods.
-func RetrieveAllPods(contexts []string) ([]Pod, error) {
+func RetrieveAllPods(contexts []string) []Pod {
 	var wg sync.WaitGroup
 	out := make(chan Pod)
 
@@ -52,12 +49,12 @@ func RetrieveAllPods(contexts []string) ([]Pod, error) {
 		close(out)
 	}(out)
 
-	var res []Pod
+	res := make([]Pod, 0, len(out))
 	for pod := range out {
 		res = append(res, pod)
 	}
 
-	return res, nil
+	return res
 }
 
 func retrieveAllContextPods(context string, wg *sync.WaitGroup, out chan Pod) {
