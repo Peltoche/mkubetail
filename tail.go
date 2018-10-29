@@ -49,10 +49,10 @@ func Tail(cmd *Cmd) error {
 }
 
 func startAsyncPodWatching(pods []Pod) error {
-	for idx := range pods {
+	for idx, pod := range pods {
 		// Little mock because I haven't access to a cluster the weekend.
-		//kubeCmd := exec.Command("kubectl", "--context="+pod.Context, "logs", "-f", pod.Name)
-		kubeCmd := exec.Command("ping", "google.com")
+		kubeCmd := exec.Command("kubectl", "--context="+pod.Context, "logs", "-f", pod.Name)
+		//kubeCmd := exec.Command("ping", "google.com")
 
 		// Can be used for debugging purpose with not kubernetes available.
 		cmdOut, err := kubeCmd.StdoutPipe()

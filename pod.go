@@ -3,7 +3,9 @@ package main
 import (
 	"fmt"
 	"io"
+	"os/exec"
 	"regexp"
+	"strings"
 	"sync"
 )
 
@@ -60,26 +62,21 @@ func RetrieveAllPods(contexts []string) []Pod {
 func retrieveAllContextPods(context string, wg *sync.WaitGroup, out chan Pod) {
 	defer wg.Done()
 
-	//cmd := exec.Command("kubectl", "--context="+context, "get", "pod", "-o=jsonpath='{.items..metadata.name}'")
-	//_, err := cmd.CombinedOutput()
-	//if err != nil {
-	//fmt.Println(err)
-	//}
+	cmd := exec.Command("kubectl", "--context="+context, "get", "pod", "-o=jsonpath='{.items..metadata.name}'")
+	rawOut, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Println(err)
+	}
 
 	// Need some parsing
+	stringOut := strings.Trim(string(rawOut), "'")
+	pods := strings.Split(stringOut, " ")
 
-	// Mock
-	out <- Pod{
-		Context: context,
-		Name:    "foo",
-	}
-	out <- Pod{
-		Context: context,
-		Name:    "bar",
-	}
-	out <- Pod{
-		Context: context,
-		Name:    "foobar",
+	for _, podName := range pods {
+		out <- Pod{
+			Context: context,
+			Name:    podName,
+		}
 	}
 }
 
