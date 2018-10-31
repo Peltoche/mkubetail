@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
 	"regexp"
 	"strings"
@@ -38,34 +39,46 @@ func SelectMatchingPods(contexts []string, args []string) []Pod {
 // RetrieveAllPods query all the contexts and returns all the known pods.
 func RetrieveAllPods(contexts []string) []Pod {
 	var wg sync.WaitGroup
-	out := make(chan Pod)
+	outChan := make(chan Pod)
+	errChan := make(chan error)
 
 	for _, context := range contexts {
 		wg.Add(1)
-		go retrieveAllContextPods(context, &wg, out)
+		go retrieveAllContextPods(context, &wg, outChan, errChan)
 	}
 
 	// Close the out chan one all the thread are finished.
-	go func(out chan Pod) {
+	go func(outChan chan Pod) {
 		wg.Wait()
-		close(out)
-	}(out)
+		close(outChan)
+	}(outChan)
 
-	res := make([]Pod, 0, len(out))
-	for pod := range out {
+	select {
+	case err, isError := <-errChan:
+		if isError {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+	default:
+	}
+
+	res := make([]Pod, 0, len(contexts))
+	for pod := range outChan {
 		res = append(res, pod)
 	}
 
 	return res
 }
 
-func retrieveAllContextPods(context string, wg *sync.WaitGroup, out chan Pod) {
+func retrieveAllContextPods(context string, wg *sync.WaitGroup, outChan chan Pod, errChan chan error) {
 	defer wg.Done()
 
 	cmd := exec.Command("kubectl", "--context="+context, "get", "pod", "-o=jsonpath='{.items..metadata.name}'")
 	rawOut, err := cmd.CombinedOutput()
 	if err != nil {
-		fmt.Println(err)
+		fmt.Printf("err1 : %s\n", err)
+		errChan <- err
+		return
 	}
 
 	// Need some parsing
@@ -73,7 +86,7 @@ func retrieveAllContextPods(context string, wg *sync.WaitGroup, out chan Pod) {
 	pods := strings.Split(stringOut, " ")
 
 	for _, podName := range pods {
-		out <- Pod{
+		outChan <- Pod{
 			Context: context,
 			Name:    podName,
 		}

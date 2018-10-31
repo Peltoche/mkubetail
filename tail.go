@@ -10,7 +10,6 @@ import (
 type Cmd struct {
 	Contexts   []string
 	Pods       []string
-	Raw        bool
 	LineConfig LineConfig
 }
 
@@ -35,16 +34,7 @@ func Tail(cmd *Cmd) error {
 		return err
 	}
 
-	if cmd.Raw {
-		PrintRawOutput(pods, &cmd.LineConfig)
-		return nil
-	}
-
-	err = PrintOutput(pods)
-	if err != nil {
-		return err
-	}
-
+	PrintOutput(pods, &cmd.LineConfig)
 	return nil
 }
 
