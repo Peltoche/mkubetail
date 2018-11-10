@@ -1,8 +1,12 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"log"
 	"os/exec"
+	"sync"
+	"time"
 )
 
 // Cmd describes the command needed to be runned and the rules used to choose
@@ -10,6 +14,7 @@ import (
 type Cmd struct {
 	Contexts   []string
 	Pods       []string
+	Duration   time.Duration
 	LineConfig LineConfig
 }
 
@@ -29,19 +34,48 @@ func Tail(cmd *Cmd) error {
 
 	pods := SelectMatchingPods(contexts, cmd.Pods)
 
-	err = startAsyncPodWatching(pods)
+	err = startAsyncPodWatching(pods, cmd)
 	if err != nil {
 		return err
 	}
 
-	PrintOutput(pods, &cmd.LineConfig)
+	var wg sync.WaitGroup
+
+	for _, pod := range pods {
+		wg.Add(1)
+
+		go func(pod Pod) {
+			defer wg.Done()
+
+			reader := bufio.NewReader(pod.Out)
+
+			for {
+				line, _, err := reader.ReadLine()
+				if err != nil {
+					log.Println(err)
+					return
+				}
+
+				fmt.Print(formatLogLine(string(line), pod, &cmd.LineConfig))
+			}
+		}(pod)
+	}
+
+	wg.Wait()
+
 	return nil
 }
 
-func startAsyncPodWatching(pods []Pod) error {
+func startAsyncPodWatching(pods []Pod, cmd *Cmd) error {
 	for idx, pod := range pods {
+		opts := []string{"--context=" + pod.Context, "logs", "-f", pod.Name}
+
+		if cmd.Duration != 0 {
+			opts = append(opts, "--since="+cmd.Duration.String())
+		}
+
 		// Little mock because I haven't access to a cluster the weekend.
-		kubeCmd := exec.Command("kubectl", "--context="+pod.Context, "logs", "-f", pod.Name)
+		kubeCmd := exec.Command("kubectl", opts...)
 		//kubeCmd := exec.Command("ping", "google.com")
 
 		// Can be used for debugging purpose with not kubernetes available.
@@ -61,4 +95,22 @@ func startAsyncPodWatching(pods []Pod) error {
 	}
 
 	return nil
+}
+
+func formatLogLine(content string, pod Pod, cfg *LineConfig) string {
+	var prefix string
+
+	if cfg.ShowContextName {
+		prefix = fmt.Sprintf("[%s]", pod.Context)
+	}
+
+	if cfg.ShowPodName {
+		prefix = fmt.Sprintf("%s[%s]", prefix, pod.Name)
+	}
+
+	if cfg.ShowContextName || cfg.ShowPodName {
+		prefix = prefix + " "
+	}
+
+	return prefix + content + "\n"
 }

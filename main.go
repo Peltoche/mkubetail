@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/spf13/cobra"
 )
@@ -10,6 +11,7 @@ import (
 func main() {
 	// Set the flag variables.
 	var matchsOpt []string
+	var durationOpt time.Duration
 	var podNamePrefixOpt bool
 	var contextNamePrefixOpt bool
 
@@ -24,6 +26,7 @@ func main() {
 			err := Tail(&Cmd{
 				Contexts: matchsOpt,
 				Pods:     args,
+				Duration: durationOpt,
 				LineConfig: LineConfig{
 					ShowPodName:     podNamePrefixOpt,
 					ShowContextName: contextNamePrefixOpt,
@@ -38,8 +41,9 @@ func main() {
 
 	// Link the flag variables to the cli.
 	rootCmd.PersistentFlags().StringArrayVarP(&matchsOpt, "context", "c", []string{}, "Context name or regex. All contexts are used if not specified.")
-	rootCmd.PersistentFlags().BoolVarP(&podNamePrefixOpt, "pod-name", "p", false, "Prefix each line with the pod's name")
-	rootCmd.PersistentFlags().BoolVarP(&contextNamePrefixOpt, "context-name", "C", false, "Prefix each line with the pod's context name")
+	rootCmd.PersistentFlags().DurationVar(&durationOpt, "since", 0, "Only return logs new than a relative duration like 5s, 2m or 4h. Print all the log if not specified.")
+	rootCmd.PersistentFlags().BoolVarP(&podNamePrefixOpt, "pod-name", "p", false, "Prefix each line with the pod's name.")
+	rootCmd.PersistentFlags().BoolVarP(&contextNamePrefixOpt, "context-name", "C", false, "Prefix each line with the pod's context name.")
 
 	// Run the cli.
 	err := rootCmd.Execute()
